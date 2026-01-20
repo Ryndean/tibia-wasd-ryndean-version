@@ -10,7 +10,7 @@ typedef void (*_PushLetter) (int Letter);
 _PushLetter PushLetter;
 
 bool isOnline() {
-	return (*(DWORD*) 0x79CF28) == 8;
+	return (*(DWORD*) 0x0071C588) == 8;
 }
 
 LRESULT CALLBACK HookedMessageDispatcher(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -112,12 +112,12 @@ static int InitMain() {
 		exit(-1);
 	}
 
-	PushLetter = (_PushLetter) 0x458200;
-	HookCall(0x4CFB8A, (DWORD) & HookedPushLetter);
+	PushLetter = (_PushLetter) 0x00447E60;
+	HookCall(0x004AB834, (DWORD) & HookedPushLetter);
 
 	DWORD dwOldProtect, dwNewProtect, funcAddress, origAddress;
 	funcAddress = (DWORD) & HookedCreateWindowEx;
-	origAddress = (DWORD) ((int*) 0x5B8574);
+	origAddress = (DWORD) ((int*) 0x0055B580);
 	VirtualProtect((LPVOID) origAddress, 4, PAGE_READWRITE, &dwOldProtect);
 	memcpy((LPVOID) origAddress, &funcAddress, 4);
 	VirtualProtect((LPVOID) origAddress, 4, dwOldProtect, &dwNewProtect);
