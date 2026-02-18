@@ -1,0 +1,6 @@
+# Buildfiles
+*.dll
+*.obj
+*.exe
+*.lib
+*.exp

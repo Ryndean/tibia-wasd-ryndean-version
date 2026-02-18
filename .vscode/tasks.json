@@ -1,0 +1,27 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Tibia DLL (x86)",
+            "type": "shell",
+            "command": "cl.exe",
+            "args": [
+                "/nologo",
+                "/LD",
+                "/Fe:ddraw.dll",
+                "dllmain.cpp",
+                "user32.lib",
+                "ws2_32.lib",
+                "/D_CRT_SECURE_NO_WARNINGS",
+                "/O2",
+                "/link",            
+                "/DEF:ddraw.def"    
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$msCompile"
+        }
+    ]
+}

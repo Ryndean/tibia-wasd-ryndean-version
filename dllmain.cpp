@@ -1,0 +1,159 @@
+#include <windows.h>
+#include <time.h>
+
+HMODULE origLibrary;
+WNDPROC wndProc;
+time_t lastGuiCtrlTab = 0;
+bool wsadActive = false;
+
+typedef void (*_PushLetter) (int Letter);
+_PushLetter PushLetter;
+
+bool isOnline() {
+    return (*(DWORD*) 0x0071C588) == 8;
+}
+
+// Hjälpfunktion för att toggla NumLock
+void SetNumLock(bool enable) {
+    BYTE keyState[256];
+    GetKeyboardState(keyState);
+    
+    // Kolla om nuvarande status är annorlunda än önskad status
+    // (NumLock är på bit 0 i keyState)
+    if ((keyState[VK_NUMLOCK] & 1) != enable) {
+        // Simulera knapptryck på NumLock
+        keybd_event(VK_NUMLOCK, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
+        keybd_event(VK_NUMLOCK, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
+    }
+}
+
+LRESULT CALLBACK HookedMessageDispatcher(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    if (!isOnline()) {
+        return CallWindowProc(wndProc, hWnd, uMsg, wParam, lParam);
+    }
+
+    // Toggle WASD med Ctrl + Tab
+    if (uMsg == WM_KEYDOWN && wParam == VK_TAB && GetKeyState(VK_CONTROL) & 0x80) {
+        if (lastGuiCtrlTab + 300 < clock()) {
+            wsadActive = !wsadActive;
+            
+            // Om vi AKTIVERAR scriptet, tvinga NumLock AV (för att diagonalerna ska funka)
+            if (wsadActive) {
+                SetNumLock(false); 
+            }
+        }
+        lastGuiCtrlTab = clock();
+        return CallWindowProc(wndProc, hWnd, uMsg, wParam, lParam);
+    }
+
+    if (uMsg == WM_KEYDOWN && wsadActive) {
+        switch (wParam) {
+            // --- Vanliga WASD ---
+            case 'W': 
+                wParam = VK_UP; 
+                break;
+            case 'S': 
+                wParam = VK_DOWN; 
+                break;
+            case 'A': 
+                wParam = VK_LEFT; 
+                break;
+            case 'D': 
+                wParam = VK_RIGHT; 
+                break;
+
+            // --- Diagonaler (QEZC) ---
+            // Tibia använder Home, PageUp, End, PageDown för diagonaler
+            case 'Q': // Motsvarar Numpad 7 (Home)
+                wParam = VK_HOME;
+                break;
+            case 'E': // Motsvarar Numpad 9 (Page Up)
+                wParam = VK_PRIOR;
+                break;
+            case 'Z': // Motsvarar Numpad 1 (End)
+                wParam = VK_END;
+                break;
+            case 'C': // Motsvarar Numpad 3 (Page Down)
+                wParam = VK_NEXT;
+                break;
+        }
+    }
+
+    return CallWindowProc(wndProc, hWnd, uMsg, wParam, lParam);
+}
+
+HWND WINAPI HookedCreateWindowEx(DWORD dwExStyle, LPCTSTR lpClassName, LPCTSTR lpWindowName, DWORD dwStyle, int x, int y, int nWidth, int nHeight, HWND hWndParent, HMENU hMenu, HINSTANCE hInstance, LPVOID lpParam) {
+    HWND m_hWnd = CreateWindowEx(dwExStyle, lpClassName, lpWindowName, dwStyle, x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+    wndProc = (WNDPROC) GetWindowLongPtr(m_hWnd, GWL_WNDPROC);
+    SetWindowLongPtr(m_hWnd, GWL_WNDPROC, (LONG_PTR) HookedMessageDispatcher);
+    return m_hWnd;
+}
+
+// Hindra att bokstäverna hamnar i chatten
+/*_cdecl */void _stdcall HookedPushLetter(int Letter) {
+    if (!isOnline() || !wsadActive) {
+        PushLetter(Letter);
+        return;
+    }
+
+    // Filtrera bort WASD
+    if (Letter == 'W' || Letter == 'w') return;
+    if (Letter == 'S' || Letter == 's') return;
+    if (Letter == 'A' || Letter == 'a') return;
+    if (Letter == 'D' || Letter == 'd') return;
+
+    // Filtrera bort QEZC
+    if (Letter == 'Q' || Letter == 'q') return;
+    if (Letter == 'E' || Letter == 'e') return;
+    if (Letter == 'Z' || Letter == 'z') return;
+    if (Letter == 'C' || Letter == 'c') return;
+
+    PushLetter(Letter);
+}
+
+void HookCall(DWORD dwCallAddress, DWORD dwNewAddress) {
+    DWORD dwOldProtect, dwNewProtect, dwNewCall;
+    BYTE call[4];
+
+    dwNewCall = dwNewAddress - dwCallAddress - 5;
+    *(DWORD*) call = dwNewCall;
+
+    VirtualProtect((LPVOID) (dwCallAddress + 1), 4, PAGE_EXECUTE_WRITECOPY, &dwOldProtect);
+    dwCallAddress += 1;
+    *(DWORD*) dwCallAddress = *(DWORD*) & call;
+    VirtualProtect((LPVOID) (dwCallAddress), 5, dwOldProtect, &dwNewProtect);
+}
+
+static int InitMain() {
+    char systemDirectory[MAX_PATH];
+    GetSystemDirectory(systemDirectory, MAX_PATH);
+    lstrcat(systemDirectory, "\\ddraw.dll");
+    origLibrary = LoadLibrary(systemDirectory);
+
+    if (!origLibrary) exit(-1);
+
+    PushLetter = (_PushLetter) 0x00447E60;
+    HookCall(0x004AB834, (DWORD) & HookedPushLetter);
+
+    DWORD dwOldProtect, dwNewProtect, funcAddress, origAddress;
+    funcAddress = (DWORD) & HookedCreateWindowEx;
+    origAddress = (DWORD) ((int*) 0x0055B580);
+    VirtualProtect((LPVOID) origAddress, 4, PAGE_READWRITE, &dwOldProtect);
+    memcpy((LPVOID) origAddress, &funcAddress, 4);
+    VirtualProtect((LPVOID) origAddress, 4, dwOldProtect, &dwNewProtect);
+
+    return 1;
+}
+
+extern "C" {
+    __declspec (dllexport) HRESULT WINAPI DirectDrawCreate(void* lpGUID, void* lplp, void* pUnkOuter) {
+        FARPROC proc = GetProcAddress(origLibrary, "DirectDrawCreate");
+        if (!proc) return E_INVALIDARG;
+        return ((HRESULT(WINAPI *)(void*, void*, void*))(DWORD) (proc))(lpGUID, lplp, pUnkOuter);
+    }
+
+    BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved) {
+        if (dwReason == DLL_PROCESS_ATTACH) return InitMain();
+        return 1;
+    }
+}
