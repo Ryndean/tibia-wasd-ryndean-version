@@ -1,4 +1,4 @@
-# Tibia WASD Movement (Ryndean Version)
+# Tibia 7.72 WASD Movement (Ryndean Version)
 
 This is an enhanced fork of the `tibia-wsad` repo. It allows for a more modern control scheme in Tibia by using **WASD** for movement and handling the chat focus automatically.
 
