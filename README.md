@@ -22,12 +22,14 @@ This is an enhanced fork of the `tibia-wsad` repo. It allows for a more modern c
 ## 🛠 Building from Source
 You can compile this project using two different methods depending on your preference.
 
-### **Option 1: Visual Studio Code (Recommended for Windows)**
-This is the easiest method if you are using VS Code:
-1. Open the project folder in VS Code.
-2. Ensure you have **MinGW-w64** (g++) installed and added to your Windows PATH.
-3. Press **`Ctrl + Shift + B`**.
-4. The `ddraw.dll` will be generated automatically in the root folder.
+### **Option 1: Visual Studio Code (MSVC Method)**
+This is the recommended method.:
+1. Close VS Code if it is open.
+2. Open the **"x86 Native Tools Command Prompt for VS 2022"** from the Start Menu.
+3. Navigate to your project folder and type `code .` to launch VS Code.
+4. **Open `dllmain.cpp` in the editor** (click it in the file explorer on the left).
+5. Press **`Ctrl + Shift + B`**.
+6. The `ddraw.dll` will be generated in your project folder.
 
 ### **Option 2: Using the Build Script (CLI / Linux / Automation)**
 If you prefer the command line or are cross-compiling from Linux:
