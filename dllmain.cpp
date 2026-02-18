@@ -13,15 +13,14 @@ bool isOnline() {
     return (*(DWORD*) 0x0071C588) == 8;
 }
 
-// Hjälpfunktion för att toggla NumLock
+// Helper function to toggle NumLock state
 void SetNumLock(bool enable) {
     BYTE keyState[256];
     GetKeyboardState(keyState);
     
-    // Kolla om nuvarande status är annorlunda än önskad status
-    // (NumLock är på bit 0 i keyState)
+    // Check if current state differs from the desired state
     if ((keyState[VK_NUMLOCK] & 1) != enable) {
-        // Simulera knapptryck på NumLock
+        // Simulate a NumLock key press
         keybd_event(VK_NUMLOCK, 0x45, KEYEVENTF_EXTENDEDKEY | 0, 0);
         keybd_event(VK_NUMLOCK, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
     }
@@ -32,12 +31,12 @@ LRESULT CALLBACK HookedMessageDispatcher(HWND hWnd, UINT uMsg, WPARAM wParam, LP
         return CallWindowProc(wndProc, hWnd, uMsg, wParam, lParam);
     }
 
-    // Toggle WASD med Ctrl + Tab
+    // Toggle WASD functionality with Ctrl + Tab
     if (uMsg == WM_KEYDOWN && wParam == VK_TAB && GetKeyState(VK_CONTROL) & 0x80) {
         if (lastGuiCtrlTab + 300 < clock()) {
             wsadActive = !wsadActive;
             
-            // Om vi AKTIVERAR scriptet, tvinga NumLock AV (för att diagonalerna ska funka)
+            // Force NumLock OFF when activating to ensure diagonal movement works correctly
             if (wsadActive) {
                 SetNumLock(false); 
             }
@@ -48,7 +47,7 @@ LRESULT CALLBACK HookedMessageDispatcher(HWND hWnd, UINT uMsg, WPARAM wParam, LP
 
     if (uMsg == WM_KEYDOWN && wsadActive) {
         switch (wParam) {
-            // --- Vanliga WASD ---
+            // --- Standard WASD Movement ---
             case 'W': 
                 wParam = VK_UP; 
                 break;
@@ -62,18 +61,18 @@ LRESULT CALLBACK HookedMessageDispatcher(HWND hWnd, UINT uMsg, WPARAM wParam, LP
                 wParam = VK_RIGHT; 
                 break;
 
-            // --- Diagonaler (QEZC) ---
-            // Tibia använder Home, PageUp, End, PageDown för diagonaler
-            case 'Q': // Motsvarar Numpad 7 (Home)
+            // --- Diagonal Movement (QEZC) ---
+            // Mapping keys to Home, Page Up, End, and Page Down as used by the game client
+            case 'Q': // Corresponds to Numpad 7 (Home)
                 wParam = VK_HOME;
                 break;
-            case 'E': // Motsvarar Numpad 9 (Page Up)
+            case 'E': // Corresponds to Numpad 9 (Page Up)
                 wParam = VK_PRIOR;
                 break;
-            case 'Z': // Motsvarar Numpad 1 (End)
+            case 'Z': // Corresponds to Numpad 1 (End)
                 wParam = VK_END;
                 break;
-            case 'C': // Motsvarar Numpad 3 (Page Down)
+            case 'C': // Corresponds to Numpad 3 (Page Down)
                 wParam = VK_NEXT;
                 break;
         }
@@ -89,20 +88,20 @@ HWND WINAPI HookedCreateWindowEx(DWORD dwExStyle, LPCTSTR lpClassName, LPCTSTR l
     return m_hWnd;
 }
 
-// Hindra att bokstäverna hamnar i chatten
-/*_cdecl */void _stdcall HookedPushLetter(int Letter) {
+// Prevents movement keys from being typed into the game chat
+void _stdcall HookedPushLetter(int Letter) {
     if (!isOnline() || !wsadActive) {
         PushLetter(Letter);
         return;
     }
 
-    // Filtrera bort WASD
+    // Filter out WASD keys
     if (Letter == 'W' || Letter == 'w') return;
     if (Letter == 'S' || Letter == 's') return;
     if (Letter == 'A' || Letter == 'a') return;
     if (Letter == 'D' || Letter == 'd') return;
 
-    // Filtrera bort QEZC
+    // Filter out diagonal keys (QEZC)
     if (Letter == 'Q' || Letter == 'q') return;
     if (Letter == 'E' || Letter == 'e') return;
     if (Letter == 'Z' || Letter == 'z') return;
