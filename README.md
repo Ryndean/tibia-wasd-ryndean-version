@@ -23,7 +23,6 @@ This is an enhanced fork of the `tibia-wsad` repo. It allows for a more modern c
 You can compile this project using two different methods depending on your preference.
 
 ### **Option 1: Visual Studio Code (MSVC Method)**
-This is the recommended method.:
 1. Close VS Code if it is open.
 2. Open the **"x86 Native Tools Command Prompt for VS 2022"** from the Start Menu.
 3. Navigate to your project folder and type `code .` to launch VS Code.
@@ -31,13 +30,12 @@ This is the recommended method.:
 5. Press **`Ctrl + Shift + B`**.
 6. The `ddraw.dll` will be generated in your project folder.
 
-### **Option 2: Using the Build Script (CLI / Linux / Automation)**
-If you prefer the command line or are cross-compiling from Linux:
-1. Open your terminal (Git Bash is recommended on Windows).
-2. Run the following command:
-   ```bash
-   ./build.sh
-3. The script will verify your compiler and link the necessary Windows libraries to create the ddraw.dll.
+### **Option 2: Using the Build Script (Linux / MinGW)**
+1. Requirements: Ensure you have the i686-w64-mingw32-g++ cross-compiler installed.
+   - Ubuntu/Debian: sudo apt update && sudo apt install g++-mingw-w64-i686
+2. Open your terminal (or Git Bash).
+3. Make the script executable: chmod +x build.sh
+4. Run the build: ./build.sh
 
 ## 🔧 Technical Methodology
 This project utilizes DLL Proxy Loading. By naming our library ddraw.dll, the Tibia client loads our code instead of the system's default DirectDraw library. We then hook the CreateWindowEx and the game's message dispatcher to intercept movement keys before they reach the chat input.
